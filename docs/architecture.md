@@ -2,15 +2,11 @@
 
 Bugle Call is a cloud-native platform designed to simulate real-world conditions in distributed system design, delivery, and operations. The architecture reflects a full-stack view across ingestion, enrichment, observability, and delivery workflows.
 
----
-
 ## Architecture Diagram
 
-![Bugle Call Architecture](images/architecture.svg)
+![Bugle Call Architecture](images/architecture.png)
 
 This diagram shows the main components and their interactions across functional domains. It includes ingestion and processing pipelines, AI-powered enrichment, multi-environment GitOps, and operational telemetry.
-
----
 
 ## Architecture Domains
 
@@ -53,8 +49,6 @@ This diagram shows the main components and their interactions across functional 
 - **ArgoCD:** GitOps delivery and multi-environment deployment promotion.
 - **Kustomize:** Environment-specific overlays for dev, staging, and prod.
 
----
-
 ## Multi-Cloud Support
 
 Bugle Call runs across multiple Kubernetes providers to simulate cloud-specific behavior:
@@ -62,8 +56,6 @@ Bugle Call runs across multiple Kubernetes providers to simulate cloud-specific 
 - **AKS:** Role-based access, managed identity, Azure regional pricing
 - **EKS:** IRSA, spot instances, AWS billing context
 - **kind / k3d:** Local testing and GitOps pipeline validation
-
----
 
 ## Rationale
 
