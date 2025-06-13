@@ -3,10 +3,9 @@
 Bugle Call is a cloud-native platform designed to simulate real-world conditions in distributed system design, delivery, and operations. The architecture reflects a full-stack view across ingestion, enrichment, observability, and delivery workflows.
 
 ## Architecture Diagram
+This diagram shows the main components and their interactions across functional domains. It includes ingestion and processing pipelines, AI-powered enrichment, multi-environment GitOps, and operational telemetry.
 
 ![Bugle Call Architecture](images/architecture.png)
-
-This diagram shows the main components and their interactions across functional domains. It includes ingestion and processing pipelines, AI-powered enrichment, multi-environment GitOps, and operational telemetry.
 
 ## Architecture Domains
 
