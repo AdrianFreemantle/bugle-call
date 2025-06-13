@@ -16,6 +16,7 @@ It includes AI capabilities for incident categorization and cost anomaly detecti
 
 ## Core Components
 [View the full architecture](docs/architecture.md)
+
 | Component                    | Description                                                             |
 |------------------------------|-------------------------------------------------------------------------|
 | Incident API (.NET)          | Accepts HTTP POSTs, validates incidents, emits events                   |
@@ -24,11 +25,13 @@ It includes AI capabilities for incident categorization and cost anomaly detecti
 | Cost Anomaly Detector        | Analyzes metrics from Prometheus and Kubecost to flag unusual behavior  |
 | PostgreSQL                   | Central structured incident storage                                     |
 | Admin UI (React)             | Internal dashboard for browsing, filtering, and analyzing incidents     |
-| Auth Gateway                 | Handles user sessions and JWT-based access control                      |
+| Auth Service (Node)          | Handles user sessions and JWT-based access control                      |
 | Load Generator               | Simulates realistic traffic and incident volumes                        |
 | Monitoring Stack             | Prometheus, Grafana, Alertmanager                                       |
 | GitOps Pipeline              | GitHub Actions and ArgoCD for delivery and promotion                    |
 | Infrastructure               | Managed with Terraform for kind, AKS, and EKS environments              |
+| GraphQL API (Node)           | Unified query layer for the UI                                          |
+| Raw Payload Store (MongoDB)  | Stores raw incident JSON                                                | 
 
 ## AI Integrations
 
@@ -81,13 +84,14 @@ Environments are configured using Kustomize overlays and deployed via ArgoCD. Se
 | Category            | Stack                                                             |
 |---------------------|-------------------------------------------------------------------|
 | Infrastructure      | Kubernetes, ArgoCD, Kustomize, Terraform                          |
-| Programming         | .NET 8, Go, Python 3.12, React                                     |
+| Programming         | .NET 8, Go, Python 3.12, React , Add GraphQL, Apollo Server       |
 | Messaging           | NATS or Redis Streams                                             |
 | Monitoring          | Prometheus, Grafana, Alertmanager                                 |
 | Cost Management     | Kubecost, anomaly detection models                                |
 | IAM & Security      | JWT, RBAC, Azure Identity, AWS IRSA                               |
 | Machine Learning    | spaCy, scikit-learn, pandas (local models only)                   |
 | CI/CD               | GitHub Actions, Docker                                            |
+| Persistence         | MongoDB, Postgres                                                 |
 
 ## Why This Project?
 

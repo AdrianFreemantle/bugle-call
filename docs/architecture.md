@@ -25,23 +25,32 @@ This diagram shows the main components and their interactions across functional 
 - **Enrichment Service (Python):** Applies tagging, severity estimation, and metadata extraction using lightweight machine learning models.
 - **Cost Anomaly Detector:** Processes telemetry from Prometheus and Kubecost to flag unusual cost patterns.
 
-### 4. Storage
+### 4. API and Auth Layer 
+
+- **GraphQL API (Node):**  
+  Provides a unified query surface for the Admin UI.  
+  Combines enriched incidents from PostgreSQL with raw payloads from MongoDB, so the UI never reaches directly into either store.
+- **Auth & Session Service (Node):**  
+  Handles OAuth-based login (Azure AD or GitHub in cloud overlays, a mock provider in dev).  
+  Issues short-lived JWTs, refresh tokens, and enforces role mapping for GraphQL requests.
+
+### 5. Storage
 
 - **PostgreSQL:** Structured relational storage for enriched and normalized incident data used in dashboards and queries.
 
-### 5. Visualization
+### 6. Visualization
 
 - **Admin UI (React):** Internal dashboard for browsing and filtering incidents.
 - **Auth Gateway (JWT):** Protects internal tools and manages session and role-based access.
 
-### 6. Observability
+### 7. Observability
 
 - **Prometheus:** Captures metrics across services.
 - **Grafana:** Visualizes trends and health metrics.
 - **Alertmanager:** Issues alerts based on defined thresholds or failures.
 - **Kubecost:** Tracks resource usage and provides cost analytics per environment.
 
-### 7. Deployment
+### 8. Deployment
 
 - **Terraform:** Infrastructure-as-Code for AKS, EKS, and local `kind` clusters.
 - **GitHub Actions:** CI for testing and packaging.
