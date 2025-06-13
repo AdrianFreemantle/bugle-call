@@ -2,23 +2,17 @@
 
 **Bugle Call is a full-stack incident intelligence platform built for testing architecture patterns, GitOps delivery, and platform resilience in real-world conditions.**
 
----
-
 ## Purpose
 
 This project is designed to simulate the realities of cloud-native architecture in a controlled, measurable environment. It focuses on the kind of work architects often design but rarely get to implement fully themselves: end-to-end system behavior under load, cost-awareness, secure access control, observability, and practical resilience.
 
 The goal is to deepen architectural skill through hands-on implementation, using modern tools and patterns across the full software lifecycle.
 
----
-
 ## What We're Building
 
 Bugle Call is a distributed system that accepts operational incidents, enriches and classifies them using machine learning, and provides secure visibility into trends, anomalies, and system behavior. It integrates intelligent processing, real-time observability, and infrastructure automation.
 
 It includes AI capabilities for incident categorization and cost anomaly detection, using lightweight local models that enhance system insight without overcomplicating the architecture.
-
----
 
 ## Core Components
 [View the full architecture](docs/architecture.md)
@@ -36,8 +30,6 @@ It includes AI capabilities for incident categorization and cost anomaly detecti
 | GitOps Pipeline              | GitHub Actions and ArgoCD for delivery and promotion                    |
 | Infrastructure               | Managed with Terraform for kind, AKS, and EKS environments              |
 
----
-
 ## AI Integrations
 
 | Feature                    | Description                                                               |
@@ -46,8 +38,6 @@ It includes AI capabilities for incident categorization and cost anomaly detecti
 | Cost Anomaly Detection      | Detects unusual usage or cost patterns from Prometheus and Kubecost data  |
 
 These integrations are fully self-hosted, resource-light, and designed to highlight practical AI enrichment within a platform context.
-
----
 
 ## Deployment Targets
 
@@ -58,8 +48,6 @@ These integrations are fully self-hosted, resource-light, and designed to highli
 | EKS (AWS)          | Spot pricing, IRSA, multi-cloud comparison                         |
 
 Environments are configured using Kustomize overlays and deployed via ArgoCD. Secrets and cloud-specific configurations are separated by layer.
-
----
 
 ## Platform Capabilities
 
@@ -88,8 +76,6 @@ Environments are configured using Kustomize overlays and deployed via ArgoCD. Se
 - Message retry logic and visibility into failure modes
 - Metrics, logs, and alerting built-in
 
----
-
 ## Technologies Used
 
 | Category            | Stack                                                             |
@@ -102,9 +88,6 @@ Environments are configured using Kustomize overlays and deployed via ArgoCD. Se
 | IAM & Security      | JWT, RBAC, Azure Identity, AWS IRSA                               |
 | Machine Learning    | spaCy, scikit-learn, pandas (local models only)                   |
 | CI/CD               | GitHub Actions, Docker                                            |
-
-
----
 
 ## Why This Project?
 
