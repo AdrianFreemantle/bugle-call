@@ -25,7 +25,7 @@ It includes AI capabilities for incident categorization and cost anomaly detecti
 | Cost Anomaly Detector        | Analyzes metrics from Prometheus and Kubecost to flag unusual behavior  |
 | PostgreSQL                   | Central structured incident storage                                     |
 | Admin UI (React)             | Internal dashboard for browsing, filtering, and analyzing incidents     |
-| Auth Service (Node)          | Handles user sessions and JWT-based access control                      |
+| Auth & Session Service (Node)| Handles user sessions and JWT-based access control                      |
 | Load Generator               | Simulates realistic traffic and incident volumes                        |
 | Monitoring Stack             | Prometheus, Grafana, Alertmanager                                       |
 | GitOps Pipeline              | GitHub Actions and ArgoCD for delivery and promotion                    |
@@ -84,7 +84,7 @@ Environments are configured using Kustomize overlays and deployed via ArgoCD. Se
 | Category            | Stack                                                             |
 |---------------------|-------------------------------------------------------------------|
 | Infrastructure      | Kubernetes, ArgoCD, Kustomize, Terraform                          |
-| Programming         | .NET 8, Go, Python 3.12, React , Add GraphQL, Apollo Server       |
+| Programming         | .NET 8, Go, Python 3.12, React, GraphQL, Apollo Server       |
 | Messaging           | NATS or Redis Streams                                             |
 | Monitoring          | Prometheus, Grafana, Alertmanager                                 |
 | Cost Management     | Kubecost, anomaly detection models                                |
