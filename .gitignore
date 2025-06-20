@@ -804,3 +804,6 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# planing files
+**/plan.md
