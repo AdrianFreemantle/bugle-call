@@ -29,22 +29,18 @@ func TestNew_MissingRequired(t *testing.T) {
 	t.Run("missing NATS_URL triggers error", func(t *testing.T) {
 		t.Setenv("NATS_URL", "")
 		_, err := New()
-		if err == nil {
-			t.Error("expected error when NATS_URL is missing")
-		}
-		if err != nil && !strings.Contains(err.Error(), "NATS_URL") {
-			t.Errorf("expected error to mention NATS_URL, got: %v", err)
+		assert.Error(t, err, "expected error when NATS_URL is missing")
+		if err != nil {
+			assert.Contains(t, err.Error(), "NATS_URL", "expected error to mention NATS_URL")
 		}
 	})
 
 	t.Run("NATS_URL is single space triggers error", func(t *testing.T) {
 		t.Setenv("NATS_URL", " ")
 		_, err := New()
-		if err == nil {
-			t.Error("expected error when NATS_URL is a single space")
-		}
-		if err != nil && !strings.Contains(err.Error(), "NATS_URL") {
-			t.Errorf("expected error to mention NATS_URL, got: %v", err)
+		assert.Error(t, err, "expected error when NATS_URL is a single space")
+		if err != nil {
+			assert.Contains(t, err.Error(), "NATS_URL", "expected error to mention NATS_URL")
 		}
 	})
 }
@@ -171,5 +167,5 @@ func TestMustLoad_ExitsOnError(t *testing.T) {
 	f.Seek(0, 0)
 	stderrBytes, err := os.ReadFile(stderrFile)
 	require.NoError(t, err)
-	assert.Contains(t, string(stderrBytes), "FATAL: NATS_URL cannot be empty")
+	assert.Contains(t, string(stderrBytes), "FATAL: invalid NATS_URL: parse \"\": empty url")
 }

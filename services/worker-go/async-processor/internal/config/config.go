@@ -38,10 +38,6 @@ func New() (*Config, error) {
 	}
 
 	// Validate NATS URL
-	if cfg.NATSURL == "" {
-		return nil, fmt.Errorf("NATS_URL cannot be empty")
-	}
-	
 	if _, err := url.ParseRequestURI(cfg.NATSURL); err != nil {
 		return nil, fmt.Errorf("invalid NATS_URL: %w", err)
 	}

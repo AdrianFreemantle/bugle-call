@@ -57,23 +57,9 @@ func TestLogger_GlobalServiceField(t *testing.T) {
 func parseLogBuffer(t *testing.T, buf *bytes.Buffer) (map[string]any, error) {
 	t.Helper()
 	var m map[string]any
-	// Get the last line from the buffer, which should be the main log entry
-	lines := strings.Split(buf.String(), "\n")
-	var lastLine string
-	for i := len(lines) - 1; i >= 0; i-- {
-		if len(strings.TrimSpace(lines[i])) > 0 {
-			lastLine = lines[i]
-			break
-		}
-	}
-	
-	if lastLine == "" {
-		return nil, fmt.Errorf("no log entries found")
-	}
-	
-	err := json.Unmarshal([]byte(lastLine), &m)
+	err := json.Unmarshal(buf.Bytes(), &m)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal JSON: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal log buffer: %w. Buffer: %s", err, buf.String())
 	}
 	return m, nil
 }
@@ -263,4 +249,17 @@ func TestLogStartupBanner_NonStringKeySkipped(t *testing.T) {
 	}
 	
 	require.True(t, infoLogFound, "Info log with startup banner not found")
+}
+
+// TestLogStartupBanner_WithExtraFields verifies that extra fields provided to the startup banner are correctly logged.
+func TestLogStartupBanner_WithExtraFields(t *testing.T) {
+	buf := &bytes.Buffer{}
+	logger := NewLoggerWithWriter("info", buf)
+
+	LogStartupBanner(logger, "test-service", "v0.1.0", "nats://localhost:4222", "8081", "extra_key", "extra_value")
+
+	m, err := parseLogBuffer(t, buf)
+	require.NoError(t, err)
+
+	require.Equal(t, "extra_value", m["extra_key"], "Expected extra field 'extra_key' to be present and correct.")
 }

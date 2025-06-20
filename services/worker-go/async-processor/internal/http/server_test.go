@@ -8,6 +8,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func startTestServer(t *testing.T) (*Server, string, func()) {
@@ -40,18 +43,14 @@ func TestHealthzEndpoint(t *testing.T) {
 	defer shutdown()
 
 	resp, err := http.Get("http://" + addr + "/healthz")
-	if err != nil {
-		t.Fatalf("failed to GET /healthz: %v", err)
-	}
+	require.NoError(t, err, "failed to GET /healthz")
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("expected 200 OK, got %d", resp.StatusCode)
-	}
-	body, _ := io.ReadAll(resp.Body)
-	if string(body) != "ok" {
-		t.Errorf("expected body to be 'ok', got %q", string(body))
-	}
+	assert.Equal(t, http.StatusOK, resp.StatusCode, "expected 200 OK")
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err, "failed to read response body")
+	assert.Equal(t, "ok", string(body), "expected body to be 'ok'")
 }
 
 func TestMetricsEndpoint(t *testing.T) {
