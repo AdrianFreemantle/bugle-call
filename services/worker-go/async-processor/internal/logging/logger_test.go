@@ -182,11 +182,30 @@ func TestParseLogBuffer_InvalidPayload(t *testing.T) {
 func TestLogStartupBanner_ExtrasAppear(t *testing.T) {
 	buf := &bytes.Buffer{}
 	logger := NewLoggerWithWriter("info", buf)
-	LogStartupBanner(logger, "svc", "v1", "nats://test", "8080", "foo", "bar", "baz", 123)
+	LogStartupBanner(logger, "svc", "v1", "nats://test", "8080",
+		"component", "test-component",
+		"build", "abc123",
+		"env", "dev",
+		"custom_field", "custom_value",
+		"metric_port", "9090",
+	)
+
 	m, err := parseLogBuffer(t, buf)
 	require.NoError(t, err)
-	require.Equal(t, "bar", m["foo"])
-	require.Equal(t, 123.0, m["baz"]) // json decodes numbers as float64
+
+	// Verify standard fields
+	require.Equal(t, "starting service", m["msg"])
+	require.Equal(t, "svc", m["service"])
+	require.Equal(t, "v1", m["version"])
+	require.Equal(t, "nats://test", m["nats_url"])
+	require.Equal(t, "8080", m["http_port"])
+
+	// Verify extra fields
+	require.Equal(t, "test-component", m["component"])
+	require.Equal(t, "abc123", m["build"])
+	require.Equal(t, "dev", m["env"])
+	require.Equal(t, "custom_value", m["custom_field"])
+	require.Equal(t, "9090", m["metric_port"])
 }
 
 // TestLogStartupBanner_OddExtrasIgnored verifies that an odd number of extra arguments logs a warning and ignores extras.

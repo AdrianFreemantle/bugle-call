@@ -86,6 +86,34 @@ func TestNew_DefaultValues(t *testing.T) {
 	assert.Equal(t, "8080", cfg.HTTPPort, "HTTPPort should default to '8080'")
 }
 
+func TestNew_InvalidLogLevel(t *testing.T) {
+	// Save original environment
+	originalEnv := os.Environ()
+	
+	// Clear all environment variables
+	os.Clearenv()
+	
+	// Set required NATS_URL and invalid log level
+	os.Setenv("NATS_URL", "nats://localhost:4222")
+	os.Setenv("LOG_LEVEL", "invalid_level")
+	
+	// Create config with invalid log level
+	cfg, err := New()
+	require.NoError(t, err)
+	
+	// Restore original environment after test
+	os.Clearenv()
+	for _, envVar := range originalEnv {
+		parts := strings.SplitN(envVar, "=", 2)
+		if len(parts) == 2 {
+			os.Setenv(parts[0], parts[1])
+		}
+	}
+	
+	// Verify log level falls back to info
+	assert.Equal(t, "info", cfg.LogLevel, "LogLevel should fallback to 'info' when invalid")
+}
+
 // Mock for os.Exit to avoid terminating tests
 func TestMustLoad_ExitsOnError(t *testing.T) {
 	// Create a temporary test directory

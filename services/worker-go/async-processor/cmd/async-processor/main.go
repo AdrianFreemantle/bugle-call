@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/example/async-processor/internal/config"
 	"github.com/example/async-processor/internal/http"
@@ -31,27 +32,51 @@ func main() {
 	ctx, stop := signalContext()
 	defer stop()
 
+	// Create error channels for components
+	httpErrCh := make(chan error, 1)
+	subErrCh := make(chan error, 1)
+
 	// Start HTTP server
 	httpSrv := http.NewServer()
-	httpErrCh := make(chan error, 1)
 	go func() {
 		httpErrCh <- httpSrv.Start(ctx)
 	}()
 
-	// Start NATS subscriber stub
+	// Start NATS subscriber
 	go func() {
-		_ = subscriber.Start(ctx, cfg, logger)
+		if err := subscriber.Start(ctx, cfg, logger); err != nil {
+			subErrCh <- err
+		}
 	}()
 
 	// Wait for termination or error
+	var exitCode int
 	select {
 	case err := <-httpErrCh:
 		if err != nil {
 			logger.Error("HTTP server exited with error", "err", err)
-			os.Exit(1)
+			exitCode = 1
 		}
+	case err := <-subErrCh:
+		logger.Error("Subscriber exited with error", "err", err)
+		exitCode = 1
 	case <-ctx.Done():
-		logger.Info("shutting down async-processor")
+		logger.Info("received shutdown signal")
+	}
+
+	// Initiate graceful shutdown
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer shutdownCancel()
+
+	// Shutdown HTTP server
+	if err := httpSrv.Stop(shutdownCtx); err != nil {
+		logger.Error("error shutting down HTTP server", "err", err)
+		exitCode = 1
+	}
+
+	logger.Info("async-processor shutdown complete")
+	if exitCode != 0 {
+		os.Exit(exitCode)
 	}
 }
 

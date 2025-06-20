@@ -46,8 +46,15 @@ func New() (*Config, error) {
 		return nil, fmt.Errorf("invalid NATS_URL: %w", err)
 	}
 
-	// Normalize log level to lowercase
+	// Normalize and validate log level
 	cfg.LogLevel = strings.ToLower(cfg.LogLevel)
+	switch cfg.LogLevel {
+	case "debug", "info", "warn", "error":
+		// Valid log level, keep as is
+	default:
+		// Invalid log level, fallback to info
+		cfg.LogLevel = "info"
+	}
 
 	return &cfg, nil
 }
