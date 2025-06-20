@@ -21,6 +21,9 @@ type Config struct {
 
 	// NATS configuration
 	NATSURL string `envconfig:"NATS_URL" required:"true"`
+
+	// MongoDB configuration (placeholder for future use)
+	MongoURI string `envconfig:"MONGO_URI" default:""`
 }
 
 // New creates a new Config instance by loading values from environment variables.

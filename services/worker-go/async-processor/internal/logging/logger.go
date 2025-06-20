@@ -25,8 +25,18 @@ func NewLogger(level string) *slog.Logger {
 	default:
 		lvl = slog.LevelInfo
 	}
-	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: lvl})
-	return slog.New(handler)
+	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: lvl,
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			if a.Key == slog.SourceKey {
+				return slog.Attr{} // Remove source if present
+			}
+			return a
+		},
+	})
+	// Add global service field to all logs
+	logger := slog.New(handler).With("service", "async-processor")
+	return logger
 }
 
 // LogStartupBanner logs a service startup banner with key config fields.

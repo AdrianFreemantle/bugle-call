@@ -13,6 +13,7 @@ func TestNew_Success(t *testing.T) {
 	t.Setenv("NATS_URL", "nats://localhost:4222")
 	t.Setenv("LOG_LEVEL", "debug")
 	t.Setenv("HTTP_PORT", "9090")
+	t.Setenv("MONGO_URI", "mongodb://localhost:27017")
 
 	cfg, err := New()
 	require.NoError(t, err)
@@ -20,6 +21,7 @@ func TestNew_Success(t *testing.T) {
 	assert.Equal(t, "nats://localhost:4222", cfg.NATSURL)
 	assert.Equal(t, "debug", cfg.LogLevel)
 	assert.Equal(t, "9090", cfg.HTTPPort)
+	assert.Equal(t, "mongodb://localhost:27017", cfg.MongoURI)
 }
 
 func TestNew_MissingRequired(t *testing.T) {
