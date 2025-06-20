@@ -3,3 +3,7 @@ kind: Kustomization
 resources:
   - ./flux
   - ./eso
+  - monitoring/namespace.yaml
+  - storage/namespace.yaml
+  - auth/namespace.yaml
+  - ui/namespace.yaml

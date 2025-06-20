@@ -1,0 +1,10 @@
+apiVersion: rbac.authorization.k8s.io/v1     # RBAC API group
+kind: Role                                  # Namespaced role
+metadata:
+  name: worker-go                           # Role name
+  labels:
+    app: worker-go                          # Label for clarity
+rules:
+  - apiGroups: [""]                         # Core API group
+    resources: ["pods", "pods/log"]         # Resources allowed
+    verbs: ["get", "list", "watch"]         # Allowed actions

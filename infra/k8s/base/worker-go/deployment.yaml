@@ -1,0 +1,28 @@
+apiVersion: apps/v1              # API version for Deployment resource
+kind: Deployment                 # Specifies this is a Deployment
+metadata:
+  name: worker-go                # Name of the deployment
+  labels:
+    app: worker-go               # Label to identify the app
+spec:
+  replicas: 1                    # Number of pod replicas
+  selector:
+    matchLabels:
+      app: worker-go             # Match pods with this label
+  template:
+    metadata:
+      labels:
+        app: worker-go           # Label applied to the pod
+      annotations:
+        prometheus.io/scrape: "true"      # Enable Prometheus scraping
+        prometheus.io/port: "8080"        # Port exposed for metrics
+        prometheus.io/path: "/metrics"    # Metrics endpoint path
+    spec:
+      containers:
+        - name: worker-go        # Container name
+          image: REPLACE_ME      # Container image (to be set in overlay)
+          ports:
+            - containerPort: 8080   # Exposes port 8080
+          envFrom:
+            - configMapRef:
+                name: worker-go-config  # Load env vars from ConfigMap

@@ -1,0 +1,14 @@
+apiVersion: rbac.authorization.k8s.io/v1     # RBAC API group
+kind: RoleBinding                           # Binds Role to SA
+metadata:
+  name: worker-go                           # Name of the RoleBinding
+  labels:
+    app: worker-go                          # Label for traceability
+subjects:
+  - kind: ServiceAccount                    # Binds a ServiceAccount
+    name: worker-go                         # Name of the SA
+    namespace: default                      # Namespace where it's bound (update if needed)
+roleRef:
+  kind: Role                                # Refers to a Role
+  name: worker-go                           # Role to bind
+  apiGroup: rbac.authorization.k8s.io       # API group for the Role

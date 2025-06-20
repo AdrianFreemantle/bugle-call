@@ -1,0 +1,9 @@
+apiVersion: v1                       # Core Kubernetes API group
+kind: ConfigMap                      # Declares a ConfigMap resource
+metadata:
+  name: worker-go-config             # Name of the ConfigMap
+  labels:
+    app: worker-go                   # Label for identification
+data:
+  NATS_URL: "nats://nats:4222"       # Example config: NATS connection URL
+  LOG_LEVEL: "info"                  # Example config: log verbosity

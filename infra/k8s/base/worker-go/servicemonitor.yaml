@@ -1,0 +1,17 @@
+apiVersion: monitoring.coreos.com/v1        # CRD for Prometheus Operator
+kind: ServiceMonitor                        # Defines how to scrape metrics
+metadata:
+  name: worker-go                           # Name of the ServiceMonitor
+  labels:
+    release: prometheus                     # Must match Prometheus selector
+spec:
+  selector:
+    matchLabels:
+      app: worker-go                        # Targets the Service by label
+  endpoints:
+    - port: http                            # Port name from Service
+      path: /metrics                        # Metrics path to scrape
+      interval: 15s                         # Scrape frequency
+  namespaceSelector:
+    matchNames:
+      - default                             # Namespace where Service lives (update if needed)
