@@ -1,67 +1,58 @@
 // HTTP server setup for Async Processor
 // Exposes /metrics endpoint using Prometheus promhttp.Handler().
 
+// Package httpserver provides HTTP server functionality for the async processor.
+// It exposes /metrics and /healthz endpoints, supports Prometheus, and allows graceful shutdown.
 package http
 
 import (
-  "context"
-  "fmt"
-  "net/http"
-  "os"
-  "os/signal"
-  "syscall"
-  "time"
+	"context"
+	"net/http"
+	"time"
 
-  "github.com/prometheus/client_golang/prometheus/promhttp"
-  "log/slog"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-// Server wraps the HTTP server logic.
+// Server is a production-grade HTTP server for the async processor.
 type Server struct {
-  srv    *http.Server
-  logger *slog.Logger
+	httpServer *http.Server
 }
 
-// NewServer creates a new HTTP server with /metrics endpoint.
-func NewServer(addr string, logger *slog.Logger) *Server {
-  mux := http.NewServeMux()
-  // /metrics endpoint for Prometheus
-  mux.Handle("/metrics", promhttp.Handler())
+// NewServer creates a new HTTP server listening on :8080 with /metrics and /healthz endpoints.
+func NewServer() *Server {
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.Handler())
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	})
 
-  srv := &http.Server{
-    Addr:    addr,
-    Handler: mux,
-  }
-  return &Server{srv: srv, logger: logger}
+	httpSrv := &http.Server{
+		Addr:         ":8080",
+		Handler:      mux,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
+	}
+	return &Server{httpServer: httpSrv}
 }
 
-// Start runs the HTTP server in a goroutine and handles graceful shutdown.
+// Start runs the HTTP server and blocks until the context is cancelled or server is shut down.
 func (s *Server) Start(ctx context.Context) error {
-  errCh := make(chan error, 1)
-  go func() {
-    s.logger.Info("starting HTTP server", "addr", s.srv.Addr)
-    errCh <- s.srv.ListenAndServe()
-  }()
+	done := make(chan error, 1)
+	go func() {
+		done <- s.httpServer.ListenAndServe()
+	}()
 
-  // Listen for shutdown signals
-  stop := make(chan os.Signal, 1)
-  signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
-
-  select {
-  case <-ctx.Done():
-    s.logger.Info("context cancelled, shutting down HTTP server")
-  case sig := <-stop:
-    s.logger.Info("received signal, shutting down HTTP server", "signal", sig)
-  case err := <-errCh:
-    if err != nil && err != http.ErrServerClosed {
-      s.logger.Error("HTTP server error", "err", err)
-      return err
-    }
-    return nil
-  }
-
-  // Graceful shutdown
-  ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-  defer cancel()
-  return s.srv.Shutdown(ctxTimeout)
+	select {
+	case <-ctx.Done():
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		return s.httpServer.Shutdown(shutdownCtx)
+	case err := <-done:
+		if err != nil && err != http.ErrServerClosed {
+			return err
+		}
+		return nil
+	}
 }

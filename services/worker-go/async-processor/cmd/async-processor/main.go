@@ -15,22 +15,54 @@ import (
 )
 
 func main() {
-  // Load configuration from environment variables
-  cfg := config.MustLoad()
+	// Load configuration
+	cfg := config.MustLoad()
 
-  // Initialize structured logger
-  logger := logging.NewLogger(cfg.LogLevel)
-  logger.Info("config loaded", "http_port", cfg.HTTPPort, "log_level", cfg.LogLevel)
+	// Initialize logger
+	logger := logging.NewLogger(cfg.LogLevel)
+	version := os.Getenv("SERVICE_VERSION")
+	if version == "" {
+		version = "dev"
+	}
+	logging.LogStartupBanner(logger, "async-processor", version, cfg.NATSURL, cfg.HTTPPort)
 
-  // Start HTTP server with /metrics endpoint
-  srv := http.NewServer(":"+cfg.HTTPPort, logger)
-  ctx := context.Background()
-  if err := srv.Start(ctx); err != nil {
-    logger.Error("failed to start HTTP server", "err", err)
-    fmt.Fprintf(os.Stderr, "fatal: %v\n", err)
-    os.Exit(1)
-  }
+	// Set up context with signal handling for graceful shutdown
+	ctx, stop := signalContext()
+	defer stop()
 
-  // Block forever (or until shutdown)
-  select {}
+	// Start HTTP server
+	httpSrv := http.NewServer()
+	httpErrCh := make(chan error, 1)
+	go func() {
+		httpErrCh <- httpSrv.Start(ctx)
+	}()
+
+	// Start NATS subscriber stub
+	go func() {
+		_ = subscriber.Start(ctx, cfg, logger)
+	}()
+
+	// Wait for termination or error
+	select {
+	case err := <-httpErrCh:
+		if err != nil {
+			logger.Error("HTTP server exited with error", "err", err)
+			os.Exit(1)
+		}
+	case <-ctx.Done():
+		logger.Info("shutting down async-processor")
+	}
 }
+
+// signalContext returns a context that is cancelled on SIGINT or SIGTERM
+func signalContext() (context.Context, context.CancelFunc) {
+	ctx, cancel := context.WithCancel(context.Background())
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-ch
+		cancel()
+	}()
+	return ctx, cancel
+}
+

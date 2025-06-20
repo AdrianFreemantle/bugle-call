@@ -1,36 +1,54 @@
-// Config loading logic for Async Processor
-// Loads configuration from environment variables using envconfig.
-// Fails fast if any required config is missing or invalid.
-
+// Package config handles configuration management for the async processor service.
+// It loads and validates configuration from environment variables.
 package config
 
 import (
-  "fmt"
-  "os"
-  "github.com/kelseyhightower/envconfig"
+	"fmt"
+	"net/url"
+	"os"
+	"strings"
+
+	"github.com/kelseyhightower/envconfig"
 )
 
-// Config holds all configuration for the async processor.
+// Config holds all configuration for the async processor service.
 type Config struct {
-  HTTPPort string `envconfig:"HTTP_PORT" required:"true"`
-  LogLevel string `envconfig:"LOG_LEVEL" default:"INFO"`
+	// HTTP server configuration
+	HTTPPort string `envconfig:"HTTP_PORT" default:"8080"`
+
+	// Logging configuration
+	LogLevel string `envconfig:"LOG_LEVEL" default:"info"`
+
+	// NATS configuration
+	NATSURL string `envconfig:"NATS_URL" required:"true"`
 }
 
-// Load loads config from env vars, fails fast on error.
-func Load() (*Config, error) {
-  var cfg Config
-  if err := envconfig.Process("", &cfg); err != nil {
-    return nil, fmt.Errorf("failed to load config: %w", err)
-  }
-  return &cfg, nil
+// New creates a new Config instance by loading values from environment variables.
+// Returns an error if required environment variables are missing or invalid.
+func New() (*Config, error) {
+	var cfg Config
+	if err := envconfig.Process("", &cfg); err != nil {
+		return nil, fmt.Errorf("failed to load config: %w", err)
+	}
+
+	// Validate NATS URL
+	if _, err := url.ParseRequestURI(cfg.NATSURL); err != nil {
+		return nil, fmt.Errorf("invalid NATS_URL: %w", err)
+	}
+
+	// Normalize log level to lowercase
+	cfg.LogLevel = strings.ToLower(cfg.LogLevel)
+
+	return &cfg, nil
 }
 
-// MustLoad loads config and exits on error (fail-fast).
+// MustLoad loads the configuration and exits the program if any error occurs.
+// This is intended for use during application startup.
 func MustLoad() *Config {
-  cfg, err := Load()
-  if err != nil {
-    fmt.Fprintf(os.Stderr, "fatal: %v\n", err)
-    os.Exit(1)
-  }
-  return cfg
+	cfg, err := New()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "FATAL: %v\n", err)
+		os.Exit(1)
+	}
+	return cfg
 }
