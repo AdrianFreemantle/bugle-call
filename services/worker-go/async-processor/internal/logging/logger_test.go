@@ -54,8 +54,6 @@ func TestLogger_GlobalServiceField(t *testing.T) {
 }
 
 // parseLogBuffer unmarshals the JSON log buffer and returns the map and error.
-// parseLogBuffer unmarshals the JSON log buffer and returns the map and error.
-// parseLogBuffer unmarshals the JSON log buffer and returns the map and error.
 func parseLogBuffer(t *testing.T, buf *bytes.Buffer) (map[string]any, error) {
 	t.Helper()
 	var m map[string]any
@@ -75,7 +73,7 @@ func parseLogBuffer(t *testing.T, buf *bytes.Buffer) (map[string]any, error) {
 	
 	err := json.Unmarshal([]byte(lastLine), &m)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal JSON: %w", err)
 	}
 	return m, nil
 }

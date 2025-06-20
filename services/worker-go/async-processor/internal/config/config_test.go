@@ -143,5 +143,5 @@ func TestMustLoad_ExitsOnError(t *testing.T) {
 	f.Seek(0, 0)
 	stderrBytes, err := os.ReadFile(stderrFile)
 	require.NoError(t, err)
-	assert.Contains(t, string(stderrBytes), "FATAL: invalid NATS_URL")
+	assert.Contains(t, string(stderrBytes), "FATAL: NATS_URL cannot be empty")
 }
