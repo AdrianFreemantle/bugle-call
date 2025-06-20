@@ -6,6 +6,7 @@
 package logging
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"strings"
@@ -39,12 +40,29 @@ func NewLogger(level string) *slog.Logger {
 	return logger
 }
 
-// LogStartupBanner logs a service startup banner with key config fields.
-func LogStartupBanner(logger *slog.Logger, service, version, natsURL, httpPort string) {
-	logger.Info("starting service",
+// LogStartupBanner logs a service startup banner with key config fields and any optional extra fields.
+// Example: LogStartupBanner(logger, "async-processor", "v1.2.3", "nats://test", "8080", "build", "abc123", "env", "dev")
+func LogStartupBanner(logger *slog.Logger, service, version, natsURL, httpPort string, extra ...any) {
+	attrs := []any{
 		"service", service,
 		"version", version,
 		"nats_url", natsURL,
 		"http_port", httpPort,
-	)
+	}
+
+	if len(extra)%2 != 0 {
+		logger.Warn("LogStartupBanner: odd number of extra arguments; extras ignored", "extra_len", len(extra))
+		logger.Info("starting service", attrs...)
+		return
+	}
+
+	for i := 0; i < len(extra); i += 2 {
+		key, ok := extra[i].(string)
+		if !ok {
+			logger.Warn("LogStartupBanner: non-string key in extra fields; pair skipped", "key_type", fmt.Sprintf("%T", extra[i]))
+			continue
+		}
+		attrs = append(attrs, key, extra[i+1])
+	}
+	logger.Info("starting service", attrs...)
 }

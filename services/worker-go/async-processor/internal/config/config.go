@@ -11,6 +11,9 @@ import (
 	"github.com/kelseyhightower/envconfig"
 )
 
+// Variable for testing - allows us to mock os.Exit
+var osExit = os.Exit
+
 // Config holds all configuration for the async processor service.
 type Config struct {
 	// HTTP server configuration
@@ -51,7 +54,7 @@ func MustLoad() *Config {
 	cfg, err := New()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "FATAL: %v\n", err)
-		os.Exit(1)
+		osExit(1)
 	}
 	return cfg
 }

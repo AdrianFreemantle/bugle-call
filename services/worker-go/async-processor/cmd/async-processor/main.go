@@ -4,14 +4,15 @@
 package main
 
 import (
-  "context"
-  "fmt"
-  "os"
-  "time"
+	"context"
+	"os"
+	"os/signal"
+	"syscall"
 
-  "github.com/example/async-processor/internal/config"
-  "github.com/example/async-processor/internal/http"
-  "github.com/example/async-processor/internal/logging"
+	"github.com/example/async-processor/internal/config"
+	"github.com/example/async-processor/internal/http"
+	"github.com/example/async-processor/internal/logging"
+	"github.com/example/async-processor/internal/subscriber"
 )
 
 func main() {
@@ -65,4 +66,3 @@ func signalContext() (context.Context, context.CancelFunc) {
 	}()
 	return ctx, cancel
 }
-
