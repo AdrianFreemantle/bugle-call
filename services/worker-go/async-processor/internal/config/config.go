@@ -3,65 +3,53 @@
 package config
 
 import (
+	"errors"
 	"fmt"
-	"net/url"
-	"os"
 	"strings"
 
 	"github.com/kelseyhightower/envconfig"
 )
 
-// Variable for testing - allows us to mock os.Exit
-var osExit = os.Exit
+// ErrNATSURLRequired is returned when the NATS_URL is not provided.
+var ErrNATSURLRequired = errors.New("NATS_URL is required and cannot be empty")
 
 // Config holds all configuration for the async processor service.
 type Config struct {
-	// HTTP server configuration
+	// HTTPPort is the port the HTTP server listens on.
 	HTTPPort string `envconfig:"HTTP_PORT" default:"8080"`
 
-	// Logging configuration
+	// LogLevel is the logging level (e.g., "debug", "info", "warn", "error").
 	LogLevel string `envconfig:"LOG_LEVEL" default:"info"`
 
-	// NATS configuration
-	NATSURL string `envconfig:"NATS_URL" required:"true"`
+	// NATSURL is the connection URL for the NATS server.
+	NATSURL string `envconfig:"NATS_URL"`
 
-	// MongoDB configuration (placeholder for future use)
-	MongoURI string `envconfig:"MONGO_URI" default:""`
+	// MongoURI is the connection URI for the MongoDB server.
+	MongoURI string `envconfig:"MONGO_URI"`
+
+	// ServiceVersion is the version of the service, typically injected at build time.
+	ServiceVersion string `envconfig:"SERVICE_VERSION" default:"dev"`
 }
 
 // New creates a new Config instance by loading values from environment variables.
-// Returns an error if required environment variables are missing or invalid.
+// It returns an error if required environment variables are missing or invalid.
 func New() (*Config, error) {
 	var cfg Config
 	if err := envconfig.Process("", &cfg); err != nil {
-		return nil, fmt.Errorf("failed to load config: %w", err)
+		return nil, fmt.Errorf("failed to process env vars: %w", err)
 	}
 
-	// Validate NATS URL
-	if _, err := url.ParseRequestURI(cfg.NATSURL); err != nil {
-		return nil, fmt.Errorf("invalid NATS_URL: %w", err)
-	}
+	// Trim whitespace from all string fields.
+	cfg.HTTPPort = strings.TrimSpace(cfg.HTTPPort)
+	cfg.LogLevel = strings.TrimSpace(cfg.LogLevel)
+	cfg.NATSURL = strings.TrimSpace(cfg.NATSURL)
+	cfg.MongoURI = strings.TrimSpace(cfg.MongoURI)
+	cfg.ServiceVersion = strings.TrimSpace(cfg.ServiceVersion)
 
-	// Normalize and validate log level
-	cfg.LogLevel = strings.ToLower(cfg.LogLevel)
-	switch cfg.LogLevel {
-	case "debug", "info", "warn", "error":
-		// Valid log level, keep as is
-	default:
-		// Invalid log level, fallback to info
-		cfg.LogLevel = "info"
+	// NATS_URL is required; return a specific error if it's empty after trimming.
+	if cfg.NATSURL == "" {
+		return nil, ErrNATSURLRequired
 	}
 
 	return &cfg, nil
-}
-
-// MustLoad loads the configuration and exits the program if any error occurs.
-// This is intended for use during application startup.
-func MustLoad() *Config {
-	cfg, err := New()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "FATAL: %v\n", err)
-		osExit(1)
-	}
-	return cfg
 }

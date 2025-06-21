@@ -12,26 +12,54 @@ A production-ready, modular Go microservice for asynchronous event processing in
 - Ready for NATS and MongoDB integration
 
 ## Configuration
-Configuration is via environment variables (see also your Kubernetes manifests):
 
-| Variable    | Required | Default | Description                 |
-|-------------|----------|---------|-----------------------------|
-| `NATS_URL`  | Yes      |         | NATS connection URL         |
-| `HTTP_PORT` | No       | 8080    | HTTP server port            |
-| `LOG_LEVEL` | No       | info    | Log level: debug/info/warn/error |
+Configuration is managed via environment variables.
 
-## Endpoints
-- `GET /healthz` — Health check, returns 200 OK
-- `GET /metrics` — Prometheus metrics
+### Required
+
+| Variable   | Description               |
+|------------|---------------------------|
+| `NATS_URL` | NATS server connection URL. |
+
+### Optional
+
+| Variable        | Default | Description                                  |
+|-----------------|---------|----------------------------------------------|
+| `HTTP_PORT`     | `8080`  | Port for the HTTP server.                    |
+| `LOG_LEVEL`     | `info`  | Log level (`debug`, `info`, `warn`, `error`).  |
+| `MONGO_URI`     | `""`    | MongoDB connection URI (for future use).     |
+| `SERVICE_VERSION` | `dev`   | Service version, included in startup logs.   |
+
+## API Endpoints
+
+- `GET /healthz`: Health check endpoint. Returns `200 OK` with body `ok`.
+- `GET /metrics`: Exposes Prometheus metrics.
 
 ## Running Locally
-```sh
-export NATS_URL=nats://localhost:4222
-export HTTP_PORT=8080
-export LOG_LEVEL=debug
 
-go run ./cmd/async-processor
-```
+1.  **Set Environment Variables**:
+
+    ```sh
+    export NATS_URL="nats://localhost:4222"
+    export HTTP_PORT="8080"
+    export LOG_LEVEL="debug"
+    ```
+
+2.  **Run the Service**:
+
+    ```sh
+    go run ./cmd/async-processor
+    ```
+
+3.  **Test Endpoints**:
+
+    ```sh
+    # Check health
+    curl http://localhost:8080/healthz
+
+    # View metrics
+    curl http://localhost:8080/metrics
+    ```
 
 ## Testing
 Run all tests:

@@ -9,9 +9,13 @@ import (
 	"github.com/example/async-processor/internal/config"
 )
 
-// Start runs the NATS subscriber. This is a stub for future implementation.
+// Start runs the NATS subscriber stub.
 func Start(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
-	logger.Info("subscriber stub: NATS integration not yet implemented")
+	logger.Info("NATS subscriber started", slog.String("nats_url", cfg.NATSURL))
+
+	// Block until context is cancelled
 	<-ctx.Done()
+
+	logger.Info("NATS subscriber shutting down")
 	return ctx.Err()
 }

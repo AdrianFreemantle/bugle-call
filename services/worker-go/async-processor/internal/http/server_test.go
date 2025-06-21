@@ -2,10 +2,11 @@ package http
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
-	"strings"
 	"testing"
 	"time"
 
@@ -13,84 +14,100 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func startTestServer(t *testing.T) (*Server, string, func()) {
-	// Listen on random port
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("failed to listen: %v", err)
-	}
+func TestServer_Endpoints(t *testing.T) {
+	// Find a free port and create a server instance
+	l, err := net.Listen("tcp", ":0")
+	require.NoError(t, err)
 	addr := l.Addr().String()
-	srv := NewServer()
-	srv.httpServer.Addr = addr
+	port := fmt.Sprintf("%d", l.Addr().(*net.TCPAddr).Port)
+	l.Close() // Close the listener, as Start() will create its own.
 
-	_, cancel := context.WithCancel(context.Background())
+	server := NewServer(port)
+
+	// Start the server in a goroutine so it doesn't block
 	go func() {
-		_ = srv.httpServer.Serve(l)
+		if err := server.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			t.Errorf("HTTP server ListenAndServe: %v", err)
+		}
 	}()
 
-	// Wait for server to be ready
-	time.Sleep(100 * time.Millisecond)
-	return srv, addr, func() {
-		cancel()
-		ctxTimeout, cancelTimeout := context.WithTimeout(context.Background(), 2*time.Second)
-		defer cancelTimeout()
-		_ = srv.httpServer.Shutdown(ctxTimeout)
-	}
+	// Defer the shutdown to ensure the server is cleaned up
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		require.NoError(t, server.Shutdown(shutdownCtx))
+	}()
+
+	// Wait until the server is ready to accept connections
+	require.Eventually(t, func() bool {
+		conn, err := net.DialTimeout("tcp", addr, 50*time.Millisecond)
+		if err != nil {
+			return false
+		}
+		conn.Close()
+		return true
+	}, 2*time.Second, 100*time.Millisecond, "server was not ready")
+
+	t.Run("/healthz", func(t *testing.T) {
+		resp, err := http.Get("http://" + addr + "/healthz")
+		require.NoError(t, err)
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		assert.Equal(t, "ok\n", string(body))
+	})
+
+	t.Run("/metrics", func(t *testing.T) {
+		resp, err := http.Get("http://" + addr + "/metrics")
+		require.NoError(t, err)
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		assert.Contains(t, string(body), "go_gc_duration_seconds")
+	})
 }
 
-func TestHealthzEndpoint(t *testing.T) {
-	_, addr, shutdown := startTestServer(t)
-	defer shutdown()
+func TestServer_Shutdown(t *testing.T) {
+	// Find a free port and create a server instance
+	l, err := net.Listen("tcp", ":0")
+	require.NoError(t, err)
+	addr := l.Addr().String()
+	port := fmt.Sprintf("%d", l.Addr().(*net.TCPAddr).Port)
+	l.Close() // Close the listener, as Start() will create its own.
 
-	resp, err := http.Get("http://" + addr + "/healthz")
-	require.NoError(t, err, "failed to GET /healthz")
-	defer resp.Body.Close()
+	srv := NewServer(port)
 
-	assert.Equal(t, http.StatusOK, resp.StatusCode, "expected 200 OK")
+	// Run the server in a goroutine so it doesn't block
+	go func() {
+		if err := srv.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			t.Errorf("HTTP server ListenAndServe: %v", err)
+		}
+	}()
 
-	body, err := io.ReadAll(resp.Body)
-	require.NoError(t, err, "failed to read response body")
-	assert.Equal(t, "ok", string(body), "expected body to be 'ok'")
-}
+	// Wait until the server is ready to accept connections
+	require.Eventually(t, func() bool {
+		conn, err := net.DialTimeout("tcp", addr, 50*time.Millisecond)
+		if err != nil {
+			return false
+		}
+		conn.Close()
+		return true
+	}, 2*time.Second, 100*time.Millisecond, "server was not ready")
 
-func TestMetricsEndpoint(t *testing.T) {
-	_, addr, shutdown := startTestServer(t)
-	defer shutdown()
+	// Now, initiate a graceful shutdown
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err = srv.Shutdown(shutdownCtx)
+	require.NoError(t, err, "expected clean shutdown")
 
-	resp, err := http.Get("http://" + addr + "/metrics")
-	if err != nil {
-		t.Fatalf("failed to GET /metrics: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("expected 200 OK, got %d", resp.StatusCode)
-	}
-	body, _ := io.ReadAll(resp.Body)
-	if !strings.Contains(string(body), "go_gc_duration_seconds") {
-		t.Errorf("expected Prometheus metrics in response, got %q", body[:100])
-	}
-}
-
-func TestGracefulShutdown(t *testing.T) {
-	_, addr, shutdown := startTestServer(t)
-
-	// Make a request before shutdown
-	resp, err := http.Get("http://" + addr + "/healthz")
-	if err != nil {
-		t.Fatalf("failed to GET /healthz: %v", err)
-	}
-	resp.Body.Close()
-
-	// Shutdown server
-	shutdown()
-
-	// Wait for shutdown to complete
-	time.Sleep(100 * time.Millisecond)
-
-	// Next request should fail
-	_, err = http.Get("http://" + addr + "/healthz")
-	if err == nil {
-		t.Error("expected error after shutdown, got nil")
+	// Verify the server is no longer listening
+	conn, err := net.DialTimeout("tcp", addr, 200*time.Millisecond)
+	assert.Error(t, err, "server should not be listening after shutdown")
+	if conn != nil {
+		conn.Close()
 	}
 }

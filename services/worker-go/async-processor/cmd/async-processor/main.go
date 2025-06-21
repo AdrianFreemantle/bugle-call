@@ -5,89 +5,89 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/example/async-processor/internal/config"
-	"github.com/example/async-processor/internal/http"
+	apphttp "github.com/example/async-processor/internal/http"
 	"github.com/example/async-processor/internal/logging"
 	"github.com/example/async-processor/internal/subscriber"
 )
 
 func main() {
+	if err := run(); err != nil {
+		fmt.Fprintf(os.Stderr, "async-processor error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
+	// Create a context that is canceled on SIGINT or SIGTERM.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	// Load configuration
-	cfg := config.MustLoad()
+	cfg, err := config.New()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "FATAL: failed to load config: %v\n", err)
+		os.Exit(1)
+	}
 
 	// Initialize logger
-	logger := logging.NewLogger(cfg.LogLevel)
+	logger := logging.NewLogger(cfg.LogLevel, "async-processor", os.Stdout)
 	version := os.Getenv("SERVICE_VERSION")
 	if version == "" {
 		version = "dev"
 	}
-	logging.LogStartupBanner(logger, "async-processor", version, cfg.NATSURL, cfg.HTTPPort)
+	logging.LogStartupBanner(logger, version, cfg.NATSURL, cfg.HTTPPort)
 
-	// Set up context with signal handling for graceful shutdown
-	ctx, stop := signalContext()
-	defer stop()
+	// Start components
+	httpSrv := apphttp.NewServer(cfg.HTTPPort)
+	var wg sync.WaitGroup
 
-	// Create error channels for components
-	httpErrCh := make(chan error, 1)
-	subErrCh := make(chan error, 1)
-
-	// Start HTTP server
-	httpSrv := http.NewServer()
+	wg.Add(1)
 	go func() {
-		httpErrCh <- httpSrv.Start(ctx)
-	}()
-
-	// Start NATS subscriber
-	go func() {
-		if err := subscriber.Start(ctx, cfg, logger); err != nil {
-			subErrCh <- err
+		defer wg.Done()
+		if err := httpSrv.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Error("http server error", "err", err)
+			stop() // trigger shutdown
 		}
 	}()
 
-	// Wait for termination or error
-	var exitCode int
-	select {
-	case err := <-httpErrCh:
-		if err != nil {
-			logger.Error("HTTP server exited with error", "err", err)
-			exitCode = 1
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := subscriber.Start(ctx, cfg, logger); err != nil && !errors.Is(err, context.Canceled) {
+			logger.Error("subscriber error", "err", err)
+			stop() // trigger shutdown
 		}
-	case err := <-subErrCh:
-		logger.Error("Subscriber exited with error", "err", err)
-		exitCode = 1
-	case <-ctx.Done():
-		logger.Info("received shutdown signal")
-	}
+	}()
+
+	// Wait for shutdown signal
+	<-ctx.Done()
 
 	// Initiate graceful shutdown
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer shutdownCancel()
+	logger.Info("shutdown signal received, starting graceful shutdown")
+
+	// Create a context with a timeout for shutdown
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
 	// Shutdown HTTP server
-	if err := httpSrv.Stop(shutdownCtx); err != nil {
-		logger.Error("error shutting down HTTP server", "err", err)
-		exitCode = 1
+	if err := httpSrv.Shutdown(shutdownCtx); err != nil {
+		logger.Error("http server shutdown error", "err", err)
 	}
 
-	logger.Info("async-processor shutdown complete")
-	if exitCode != 0 {
-		os.Exit(exitCode)
-	}
-}
+	// Wait for all goroutines to finish
+	wg.Wait()
 
-// signalContext returns a context that is cancelled on SIGINT or SIGTERM
-func signalContext() (context.Context, context.CancelFunc) {
-	ctx, cancel := context.WithCancel(context.Background())
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-ch
-		cancel()
-	}()
-	return ctx, cancel
+	logger.Info("shutdown complete")
+
+	return nil
 }
